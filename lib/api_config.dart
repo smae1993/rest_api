@@ -3,7 +3,7 @@ class ApiConfig {
   String? token;
   String tokenParam;
 
-  Function? logoutCallback;
+  Function()? logoutCallback;
   ApiConfig(this.url,
       {this.token,
       this.timeout = const Duration(seconds: 5),

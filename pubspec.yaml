@@ -1,5 +1,5 @@
 name: rest_api
-description: A RestApi Library that handling jwt and passport token base authentication.
+description: A RestApi Library that handling jwt and passport token base authentication with full response status code handling.
 version: 0.0.1
 homepage:
 

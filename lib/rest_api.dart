@@ -1,6 +1,7 @@
 library rest_api;
 
 import 'package:http/http.dart';
+import 'package:log_print/log_print.dart';
 import 'package:rest_api/api_config.dart';
 import 'package:rest_api/api_response.dart';
 import 'package:rest_api/api_response_types.dart';
@@ -11,30 +12,27 @@ ApiConfig restApiConfig = ApiConfig("yourWebsiteUrl");
 
 /// A RestApi Library that handling jwt and passport token base authentication.
 class RestApi {
+  /// route configuration such as url and request method.
   ApiRoute route;
-  Map<String, String>? inputs;
-  Map<String, String> headers;
-  bool authentication;
-  late Uri uri;
 
-  RestApi(this.route,
-      {this.authentication = true, this.inputs, this.headers = const {}}) {
-    fillHeaders();
-    uri = Uri.parse(restApiConfig.url + route.path);
+  /// private uri generated in connect function.
+  late Uri _uri;
+
+  /// constructor with required ApiRoute object.
+  RestApi(this.route) {
+    _fillHeaders();
+    _uri = Uri.parse(restApiConfig.url + route.path);
   }
 
-  void fillHeaders() {
+  /// fill headers if needs Authorization header
+  void _fillHeaders() {
     try {
-      // headers = {
-      //   // 'Content-Type': '*',
-      //   // 'Accept': '*',
-      // };
-      if (authentication) {
-        headers.putIfAbsent(
+      if (route.authentication) {
+        route.headers.putIfAbsent(
             "Authorization", () => 'Bearer ${restApiConfig.token}');
       }
     } catch (e) {
-      // headers = {};
+      LogPrint("RestApi filling header error : $e", type: LogPrintType.error);
     }
   }
 
@@ -64,32 +62,33 @@ class RestApi {
   //   });
   // }
 
+  /// connecting to requested url
   Future<ApiResponse> connect() async {
     Response response;
     switch (route.type) {
       case RequestType.get:
         response = await http
-            .get(uri, headers: headers)
+            .get(_uri, headers: route.headers)
             .timeout(restApiConfig.timeout);
         break;
       case RequestType.post:
         response = await http
-            .post(uri, body: inputs, headers: headers)
+            .post(_uri, body: route.inputs, headers: route.headers)
             .timeout(restApiConfig.timeout);
         break;
       case RequestType.put:
         response = await http
-            .put(uri, body: inputs, headers: headers)
+            .put(_uri, body: route.inputs, headers: route.headers)
             .timeout(restApiConfig.timeout);
         break;
       case RequestType.patch:
         response = await http
-            .patch(uri, body: inputs, headers: headers)
+            .patch(_uri, body: route.inputs, headers: route.headers)
             .timeout(restApiConfig.timeout);
         break;
       case RequestType.delete:
         response = await http
-            .delete(uri, body: inputs, headers: headers)
+            .delete(_uri, body: route.inputs, headers: route.headers)
             .timeout(restApiConfig.timeout);
         break;
     }
@@ -110,7 +109,14 @@ class RestApi {
     return apiResponse;
   }
 
+  /// handling some specified errors like unauthorized
   void handleErrors(ApiResponse response) {
+    if (response.type == ResponseType.unAuthorized) {
+      if (restApiConfig.logoutCallback != null) {
+        restApiConfig.logoutCallback!();
+      }
+    }
+
     // String errorString = "";
     // switch (response.statusCode) {
     //   case 401:
